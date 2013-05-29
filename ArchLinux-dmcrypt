@@ -1,0 +1,41 @@
+#!/bin/bash
+modprobe dm_mod
+cryptsetup -c aes-xts-plain -s 512 luksFormat /dev/sda2 /mnt/USB/keyfile.jpg
+cryptsetup -d /mnt/USB/keyfile.jpg luksOpen /dev/sda2 rootcrypt
+mkfs -t ext4 /dev/mapper/rootcrypt
+mkfs -t ext4 /dev/sda1
+mkdir /mnt/boot
+mount /dev/sda1 /mnt/boot
+mount /dev/mapper/rootcrypt /mnt
+pacstrap -i /mnt base base-devel
+genfstab -p /mnt > /mnt/etc/fstab
+arch-chroot /mnt
+bash
+cd //boot
+pacman -S syslinux
+nano /etc/syslinux/syslinux.cfg
+//append the keyfile path//
+cryptdevice=/dev/sda2:rootcrypt root=/dev/mapper/rootcrypt ro cryptkey=/dev/disk/by-label/USB:vfat:keyfile.jpg
+nano /etc/mkinitcpio.conf
+//add encrypt hook //
+MODULES="dm_mod vfat ext4"
+HOOKS=base udev block autodetect encrypt filesystems
+//Save the file and exit//
+syslinux-install_update -i
+syslinux-install_update -a
+syslinux-install_update -m
+nano /etc/hostname
+passwd
+ln -s /usr/share/zoneinfo/America/New_York /etc/localtime
+nano /etc/locale.gen
+LANG="en_US.UTF-8"
+//Save and exit the file//
+nano /etc/locale.conf
+//Uncomment the en_US.UTF-8 line//
+//Save and exit the file//
+exit
+exit
+mkinitcpio -p linux
+umount /dev/sda1
+reboot                                                                                                                                                      1,1           Top
+
